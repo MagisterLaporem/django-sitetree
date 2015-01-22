@@ -526,13 +526,17 @@ class SiteTree(object):
         else:
             url_pattern = str(sitetree_item.url)
 
-        tree_alias = sitetree_item.tree.alias
+        cache_key = sitetree_item.tree.alias
 
-        entry_from_cache = self.get_cache_entry('urls', tree_alias)
+        # i18n_patterns and LocaleMiddleware compatibility
+        lang = getattr(self._global_context['request'], 'LANGUAGE_CODE', '')
+        cache_key = '%s%s' % (cache_key, lang)
+
+        entry_from_cache = self.get_cache_entry('urls', cache_key)
         if not entry_from_cache:
             # Create 'cache_urls' for this tree.
             entry_from_cache = {}
-            self.set_cache_entry('urls', tree_alias, {})
+            self.set_cache_entry('urls', cache_key, {})
 
         if url_pattern in entry_from_cache:
             resolved_url = entry_from_cache[url_pattern][0]
@@ -553,7 +557,7 @@ class SiteTree(object):
             else:
                 resolved_url = url_pattern
 
-            self.update_cache_entry_value('urls', tree_alias, {url_pattern: (resolved_url, sitetree_item)})
+            self.update_cache_entry_value('urls', cache_key, {url_pattern: (resolved_url, sitetree_item)})
 
         return resolved_url
 
