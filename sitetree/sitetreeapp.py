@@ -529,7 +529,7 @@ class SiteTree(object):
         cache_key = sitetree_item.tree.alias
 
         # i18n_patterns and LocaleMiddleware compatibility
-        lang = getattr(self._global_context['request'], 'LANGUAGE_CODE', '')
+        lang = getattr(self._global_context.get('request'), 'LANGUAGE_CODE', '')
         cache_key = '%s%s' % (cache_key, lang)
 
         entry_from_cache = self.get_cache_entry('urls', cache_key)
