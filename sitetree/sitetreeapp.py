@@ -411,6 +411,7 @@ class SiteTree(object):
             for item in sitetree:
                 self.update_cache_entry_value('items_by_ids', alias, {item.id: item})
 
+        context_lang = self.get_context_lang()
         for item in sitetree:
             if sitetree_needs_caching:
                 item.has_children = False
@@ -424,7 +425,7 @@ class SiteTree(object):
                     item.perms = set([u'%s.%s' % (perm.content_type.app_label, perm.codename) for perm in
                                                item.access_permissions.select_related()])
             # Contextual properties.
-            item.url_resolved = self.url(item)
+            item.url_resolved = self.url(item, lang=context_lang)
             if template.VARIABLE_TAG_START in item.title:
                 item.title_resolved = LazyTitle(item.title)
             else:
@@ -473,7 +474,9 @@ class SiteTree(object):
         else:
             # urlquote is an attempt to support non-ascii in url.
             current_url = urlquote(self._global_context['request'].path)
-            urls_cache = self.get_cache_entry('urls', tree_alias)
+            # i18n_patterns and LocaleMiddleware compatibility
+            cache_key = '%s%s' % (tree_alias, self.get_context_lang())
+            urls_cache = self.get_cache_entry('urls', cache_key)
             if urls_cache:
                 for url_item in urls_cache:
                     urls_cache[url_item][1].is_current = False
@@ -485,7 +488,7 @@ class SiteTree(object):
 
         return current_item
 
-    def url(self, sitetree_item, context=None):
+    def url(self, sitetree_item, context=None, lang=None):
         """Resolves item's URL.
 
         'sitetree_item' points to TreeItem object, 'url' property of which
@@ -526,11 +529,8 @@ class SiteTree(object):
         else:
             url_pattern = str(sitetree_item.url)
 
-        cache_key = sitetree_item.tree.alias
-
         # i18n_patterns and LocaleMiddleware compatibility
-        lang = getattr(self._global_context.get('request'), 'LANGUAGE_CODE', '')
-        cache_key = '%s%s' % (cache_key, lang)
+        cache_key = '%s%s' % (sitetree_item.tree.alias, lang)
 
         entry_from_cache = self.get_cache_entry('urls', cache_key)
         if not entry_from_cache:
@@ -560,6 +560,13 @@ class SiteTree(object):
             self.update_cache_entry_value('urls', cache_key, {url_pattern: (resolved_url, sitetree_item)})
 
         return resolved_url
+
+    def get_context_lang(self):
+        """Returns language code from current global context.
+
+        :return:
+        """
+        return getattr(self._global_context.get('request'), 'LANGUAGE_CODE', '')
 
     def init_tree(self, tree_alias, context):
         """Tries to initialize sitetree in memory.

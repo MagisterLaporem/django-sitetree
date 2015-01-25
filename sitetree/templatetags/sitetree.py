@@ -1,4 +1,5 @@
 from django import template
+from django.utils.translation import get_language
 
 from ..sitetreeapp import get_sitetree
 
@@ -228,9 +229,10 @@ class sitetree_urlNode(template.Node):
     def __init__(self, sitetree_item, as_var):
         self.sitetree_item = sitetree_item
         self.as_var = as_var
+        self.lang = get_language()
 
     def render(self, context):
-        resolved_url = sitetree.url(self.sitetree_item, context)
+        resolved_url = sitetree.url(self.sitetree_item, context, lang=self.lang)
         if self.as_var:
             context[self.as_var] = resolved_url
             return ''
